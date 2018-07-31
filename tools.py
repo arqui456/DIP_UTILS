@@ -860,6 +860,207 @@ def highpassFilter(input):
         cv2.imshow("img2", np.fft.fftshift(scaleImage2_uchar(img2[:, :, 1])))
     cv2.destroyAllWindows()
 
+def DFT4(input):
+    # %% The Discrete Fourier Transform - Visualizing sinusoidal images - Part II
+    rows = 250
+    cols = 250
+    freq = 1
+    theta = 2
+
+    cv2.namedWindow("mag", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("img", cv2.WINDOW_KEEPRATIO)
+
+    cv2.createTrackbar("Freq", "img", freq, 500, doNothing)
+    cv2.createTrackbar("Theta", "img", theta, 100, doNothing)
+
+    while cv2.waitKey(1) != ord('q'):
+        freq = cv2.getTrackbarPos("Freq", "img")
+        theta = cv2.getTrackbarPos("Theta", "img")
+
+        img = createCosineImage2(rows, cols, float(freq / 1e3), theta)
+        img3 = np.copy(img)
+        planes = [img3, np.zeros(img3.shape, np.float64)]
+        img2 = cv2.merge(planes)
+        img2 = cv2.dft(img2)
+        planes = cv2.split(img2)
+        mag = cv2.magnitude(planes[0], planes[1])
+        mag = applyLogTransform(mag)
+
+        cv2.imshow("img", cv2.applyColorMap(scaleImage2_uchar(img),
+                                            cv2.COLORMAP_JET))
+        cv2.imshow("mag", cv2.applyColorMap(np.fft.fftshift(scaleImage2_uchar(mag)),
+                                            cv2.COLORMAP_JET))
+    cv2.destroyAllWindows()
+
+def DFTAddNoise(input):
+    # %% The Discrete Fourier Transform - Adding sinusoidal noise to images - Part I
+    cv2.namedWindow("mag", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("img", cv2.WINDOW_KEEPRATIO)
+
+    img = cv2.imread("lena.png", cv2.IMREAD_GRAYSCALE)
+
+    img = np.float32(img)
+    img = img / 255.0
+
+    rows = img.shape[0]
+    cols = img.shape[1]
+
+    freq = 90
+    theta = 10
+    gain = 30
+
+    cv2.createTrackbar("Freq", "img", freq, 500, doNothing)
+    cv2.createTrackbar("Theta", "img", theta, 100, doNothing)
+    cv2.createTrackbar("Gain", "img", gain, 100, doNothing)
+
+    while cv2.waitKey(1) != ord('q'):
+        freq = cv2.getTrackbarPos("Freq", "img")
+        theta = cv2.getTrackbarPos("Theta", "img")
+        gain = cv2.getTrackbarPos("Gain", "img")
+
+        noise = createCosineImage2(rows, cols, float(freq / 1e3), theta)
+        noise = img + float(gain / 100.0) * noise
+
+        img3 = np.copy(noise)
+        planes = [img3, np.zeros(img3.shape, np.float64)]
+        img2 = cv2.merge(planes)
+        img2 = cv2.dft(img2)
+        planes = cv2.split(img2)
+        mag = cv2.magnitude(planes[0], planes[1])
+        mag = applyLogTransform(mag)
+
+        cv2.imshow("img", scaleImage2_uchar(noise))
+        cv2.imshow("mag", cv2.applyColorMap(
+            np.fft.fftshift(scaleImage2_uchar(mag)),
+            cv2.COLORMAP_OCEAN))
+    cv2.destroyAllWindows()
+
+def DFTAddNoise2(input):
+    # %% The Discrete Fourier Transform - Adding sinusoidal noise to images - Part II
+    cv2.namedWindow("img", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("mask", cv2.WINDOW_KEEPRATIO)
+
+    img = cv2.imread("lena.png", cv2.IMREAD_GRAYSCALE)
+    img = np.float32(img)
+    img = img / 255.0;
+
+    rows = img.shape[0]
+    cols = img.shape[1]
+
+    freq = 90
+    theta = 10
+    gain = 30
+
+    cv2.createTrackbar("Freq", "img", freq, 500, doNothing)
+    cv2.createTrackbar("Theta", "img", theta, 100, doNothing)
+    cv2.createTrackbar("Gain", "img", gain, 100, doNothing)
+
+    bandwidth = 2
+    outer_radius = 256 - 210 + bandwidth
+    inner_radius = 256 - 210 - bandwidth
+    cv2.createTrackbar("in_radius", "mask", inner_radius, img.shape[1], doNothing)
+    cv2.createTrackbar("out_radius", "mask", outer_radius, img.shape[1], doNothing)
+
+    while cv2.waitKey(1) != ord('q'):
+        freq = cv2.getTrackbarPos("Freq", "img")
+        theta = cv2.getTrackbarPos("Theta", "img")
+        gain = cv2.getTrackbarPos("Gain", "img")
+
+        outer_radius = cv2.getTrackbarPos("in_radius", "mask")
+        inner_radius = cv2.getTrackbarPos("out_radius", "mask")
+
+        noise = img + float(gain / 100.0) * createCosineImage2(
+            rows, cols, float(freq / 1e3), theta)
+
+        mask = 1 - (createWhiteDisk2(rows, cols, int(cols / 2),
+                                     int(rows / 2), outer_radius) - createWhiteDisk2(rows, cols, int(cols / 2),
+                                                                                     int(rows / 2), inner_radius))
+
+        planes = [np.copy(noise), np.zeros(noise.shape, np.float64)]
+        img2 = cv2.merge(planes)
+        img2 = cv2.dft(img2)
+        planes = cv2.split(img2)
+        mag = cv2.magnitude(planes[0], planes[1])
+        mag = applyLogTransform(mag)
+        planes[0] = np.multiply(np.fft.fftshift(mask), planes[0])
+        planes[1] = np.multiply(np.fft.fftshift(mask), planes[1])
+        tmp = cv2.merge(planes)
+        tmp = cv2.idft(tmp)
+
+        cv2.imshow("img", scaleImage2_uchar(noise))
+        cv2.imshow("mag", cv2.applyColorMap(np.fft.fftshift(scaleImage2_uchar(mag)), cv2.COLORMAP_OCEAN))
+        cv2.imshow("mask", scaleImage2_uchar(mask))
+        cv2.imshow("tmp", scaleImage2_uchar(tmp[:, :, 0]))
+    cv2.destroyAllWindows()
+
+def avgBlur(input):
+    #    Average Blurring
+
+    img = cv2.imread('img/lena.png')
+
+    cv2.namedWindow("Original", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("New", cv2.WINDOW_KEEPRATIO)
+
+    ksizex = 0;
+    ksizey = 0
+
+    cv2.createTrackbar("ksizex", "New", ksizex, 63, doNothing)
+    cv2.createTrackbar("ksizey", "New", ksizey, 63, doNothing)
+
+    img2 = np.zeros(img.shape, dtype=np.float64)
+
+    while cv2.waitKey(1) != ord('q'):
+
+        ksizey = cv2.getTrackbarPos("ksizey", "New")
+        ksizex = cv2.getTrackbarPos("ksizex", "New")
+
+        if ksizex < 1:
+            ksizex = 1
+        if ksizey < 1:
+            ksizey = 1
+
+        img2 = cv2.blur(img, (ksizex, ksizey), img2, (-1, -1), cv2.BORDER_DEFAULT)
+
+        cv2.imshow("Original", img)
+        cv2.imshow("New", img2)
+
+def saltAndClean(input):
+    #Adding salt & pepper noise to an image and cleaning it using the median
+    img = cv2.imread("img/lena.png", cv2.IMREAD_GRAYSCALE)
+    
+    noise = np.zeros(img.shape, np.uint8)
+    img2 = np.zeros(img.shape, np.uint8)
+    img3 = np.zeros(img.shape, np.uint8)
+    salt = np.zeros(img.shape, np.uint8)
+    pepper = np.zeros(img.shape, np.uint8)
+    
+    ksize = 0
+    amount = 5
+    cv2.namedWindow("img3", cv2.WINDOW_KEEPRATIO);
+    cv2.namedWindow("img2", cv2.WINDOW_KEEPRATIO);
+    cv2.createTrackbar("ksize", "img3", ksize, 15, doNothing)
+    cv2.createTrackbar("amount", "img2", amount, 120, doNothing)
+    
+    cv2.randu(noise, 0, 255)
+    
+    while cv2.waitKey(1) != ord('q'):
+        amount = cv2.getTrackbarPos("amount", "img2")
+        ksize = cv2.getTrackbarPos("ksize", "img3")
+    
+        img2 = np.copy(img)
+    
+        salt = noise > 255 - amount
+        pepper = noise < amount
+    
+        img2[salt == True] = 255
+        img2[pepper == True] = 0
+    
+        img3 = cv2.medianBlur(img2, (ksize + 1) * 2 - 1)
+    
+        cv2.imshow("img", img)
+        cv2.imshow("img2", img2)
+        cv2.imshow("img3", img3)
+
 
 def main():
     print("Welcome to PDI tools 0.1!")
@@ -873,8 +1074,11 @@ def main():
     #DFT2("eye.jpeg")
     #DFT3("eye.jpeg")
     #DFTTRUE("eye.jpeg")
-    #lowpassFilter("eye.jpeg")
-    highpassFilter("eye.jpeg")
+    lowpassFilter("eye.jpeg")
+    #highpassFilter("eye.jpeg")
+    #DFTAddNoise2("eye.jpeg")
+    #DFT4("eyes.jpeg")
+    #LaplacOP2("eyes.jpeg")
 if __name__ == "__main__":
     main()
     #cv2.namedWindow("img")
