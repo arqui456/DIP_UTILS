@@ -459,7 +459,7 @@ def LHP(input):
 def LHP1(input):
     cv2.namedWindow("Original", cv2.WINDOW_KEEPRATIO)
     cv2.namedWindow("New", cv2.WINDOW_KEEPRATIO)
-    img = cv2.imread('img/tungsten.tif', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("eye.jpeg", cv2.IMREAD_GRAYSCALE)
 
     img2 = np.copy(img)
 
@@ -536,7 +536,7 @@ def FDO(input):
 def FDO2(input):
     #First derivative operators - Sobel masks - Part II
 
-    img = cv2.imread("img/lena.png", cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("eye.jpeg", cv2.IMREAD_GRAYSCALE)
     
     gx, gy = cv2.spatialGradient(img, ksize=3, borderType=cv2.BORDER_DEFAULT)
     g = np.abs(gx) + np.abs(gy)
@@ -554,7 +554,7 @@ def FDO2(input):
 def FDO3(input):
     #First derivative operators - Sobel masks - Part III
 
-    img = cv2.imread("img/lena.png", cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("eye.jpeg", cv2.IMREAD_GRAYSCALE)
 
     gx = cv2.Sobel(img, cv2.CV_32F, 1, 0)
     gy = cv2.Sobel(img, cv2.CV_32F, 1, 0)
@@ -575,7 +575,7 @@ def LaplacOP(input):
 
     cv2.namedWindow("img3")
 
-    img = cv2.imread("img/lena.png", cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("eye.jpeg", cv2.IMREAD_COLOR)
 
     img = np.float32(img)
 
@@ -605,7 +605,9 @@ def LaplacOP(input):
 
 def LaplacOP2(input):
     #Image sharpening using the Laplacian operator - Part II
-    img = cv2.imread("img/lena.png", cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("eye.jpeg", cv2.IMREAD_COLOR)
+    
+    #IMREAD_GRAYSCALE
     lap = cv2.Laplacian(img, ddepth=cv2.CV_32F, ksize=1, scale=1, delta=0)
 
     img = np.float32(img)
@@ -620,13 +622,259 @@ def LaplacOP2(input):
         cv2.imshow("img2", img2)
         cv2.imshow("lap", scaleImage2_uchar(lap))
 
+def gaussFilter(input):
+    rows = 400
+    cols = 400
+    theta = 0
+    xc = 200
+    yc = 200
+    sx = 120
+    sy = 40
+
+    cv2.namedWindow('img')
+    cv2.createTrackbar("xc", "img", xc, int(rows), doNothing)
+    cv2.createTrackbar("yc", "img", yc, int(cols), doNothing)
+    cv2.createTrackbar("sx", "img", sx, int(rows), doNothing)
+    cv2.createTrackbar("sy", "img", sy, int(cols), doNothing)
+    cv2.createTrackbar("theta", "img", theta, 360, doNothing)
+    while 0xFF & cv2.waitKey(1) != ord('q'):
+        xc = cv2.getTrackbarPos("xc", "img")
+        yc = cv2.getTrackbarPos("yc", "img")
+        sx = cv2.getTrackbarPos("sx", "img")
+        sy = cv2.getTrackbarPos("sy", "img")
+        theta = cv2.getTrackbarPos("theta", "img")
+        img = create2DGaussian(rows, cols, xc, yc, sx, sy, theta)
+        cv2.imshow('img', cv2.applyColorMap(scaleImage2_uchar(img),
+                                            cv2.COLORMAP_JET))
+    cv2.destroyAllWindows()
+
+def DFT(input):
+    # %% The Discrete Fourier Transform - Part I - Obtaining real and imaginary
+    # parts of the Fourier Transform
+    img = cv2.imread(str(input), cv2.IMREAD_GRAYSCALE)
+
+    cv2.namedWindow("Original", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Plane 0 - Real", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Plane 1 - Imaginary", cv2.WINDOW_KEEPRATIO)
+
+    planes = [np.zeros(img.shape, dtype=np.float64),
+              np.zeros(img.shape, dtype=np.float64)]
+    planes[0][:] = np.float64(img[:])
+
+    img2 = cv2.merge(planes)
+    img2 = cv2.dft(img2)
+
+    planes = cv2.split(img2)
+
+    # cv2.normalize(planes[0], planes[0], 1, 0, cv2.NORM_MINMAX)
+    # cv2.normalize(planes[1], planes[1], 1, 0, cv2.NORM_MINMAX)
+
+    while 0xFF & cv2.waitKey(1) != ord('q'):
+        cv2.imshow('Original', img)
+        cv2.imshow('Plane 0 - Real', planes[0])
+        cv2.imshow('Plane 1 - Imaginary', planes[1])
+    cv2.destroyAllWindows()
+
+def DFT2(input):
+    # %% DFT - Part II -> Applying the log transform
+    img = cv2.imread('img/rectangle.jpg', cv2.IMREAD_GRAYSCALE)
+
+    cv2.namedWindow("Original", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Plane 0 - Real", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Plane 1 - Imaginary", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Mag", cv2.WINDOW_KEEPRATIO)
+
+    planes = [np.zeros(img.shape, dtype=np.float64),
+              np.zeros(img.shape, dtype=np.float64)]
+
+    planes[0][:] = np.float64(img[:])
+    planes[1][:] = np.float64(img[:])
+
+    cv2.normalize(planes[0], planes[0], 1, 0, cv2.NORM_MINMAX)
+    cv2.normalize(planes[1], planes[1], 1, 0, cv2.NORM_MINMAX)
+
+    img2 = cv2.merge(planes)
+    img2 = cv2.dft(img2)
+    planes = cv2.split(img2)
+
+    mag = cv2.magnitude(planes[0], planes[1])
+    mag += 1
+    mag = np.log(mag)
+
+    cv2.normalize(mag, mag, 1, 0, cv2.NORM_MINMAX)
+
+    while cv2.waitKey(1) != ord('q'):
+        cv2.imshow('Original', img)
+        cv2.imshow('Plane 0 - Real', planes[0])
+        cv2.imshow('Plane 1 - Imaginary', planes[1])
+        cv2.imshow('Mag', mag)
+    cv2.destroyAllWindows()
+
+def DFT3(input):
+    # %% DFT - Part III -> Shifting the Transform
+    img = cv2.imread('lena.png', cv2.IMREAD_GRAYSCALE)
+
+    cv2.namedWindow("Original", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Mag", cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("Mag Shifted", cv2.WINDOW_KEEPRATIO)
+
+    planes = [np.zeros(img.shape, dtype=np.float64),
+              np.zeros(img.shape, dtype=np.float64)]
+
+    planes[0][:] = np.float64(img[:])
+    planes[1][:] = np.float64(img[:])
+    cv2.normalize(planes[0], planes[0], 1, 0, cv2.NORM_MINMAX)
+    cv2.normalize(planes[1], planes[1], 1, 0, cv2.NORM_MINMAX)
+
+    img2 = cv2.merge(planes)
+    img2 = cv2.dft(img2)
+    planes = cv2.split(img2)
+
+    mag = cv2.magnitude(planes[0], planes[1])
+    mag += 1
+    mag = np.log(mag)
+
+    cv2.normalize(mag, mag, 1, 0, cv2.NORM_MINMAX)
+
+    while cv2.waitKey(1) != ord('q'):
+        # print(mag)
+        cv2.imshow('Original', img)
+        cv2.imshow('Mag Shifted', np.fft.fftshift(mag))
+        cv2.imshow('Mag', mag)
+    cv2.destroyAllWindows()
+
+def DFTTRUE(input):
+    # %% The Discrete Fourier Transform
+    rows = 200
+    cols = 200
+    disk = np.zeros((rows, cols), np.float32)
+
+    cv2.namedWindow("disk", cv2.WINDOW_KEEPRATIO)
+
+    xc = 100
+    yc = 100
+    radius = 20
+
+    cv2.createTrackbar("xc", "disk", xc, disk.shape[0], doNothing)
+    cv2.createTrackbar("yc", "disk", yc, disk.shape[1], doNothing)
+    cv2.createTrackbar("radius", "disk", radius, int(disk.shape[1] / 2), doNothing)
+
+    while cv2.waitKey(1) != ord('q'):
+        xc = cv2.getTrackbarPos("xc", "disk")
+        yc = cv2.getTrackbarPos("yc", "disk")
+        radius = cv2.getTrackbarPos("radius", "disk")
+        disk = createWhiteDisk2(200, 200, xc, yc, radius)
+
+        cv2.imshow("disk", disk)
+    cv2.destroyAllWindows()
+
+def lowpassFilter(input):
+    # %% The Discrete Fourier Transform - Part III - Lowpass Filtering
+    # Ressaltar o surgimento de "falseamento", isto é, frequencia notáveis
+    # quando é feita a transformada inversa. Isto ocorre pq o filtro é IDEAL.
+    # Comparar o resultado da filtragem usando uma Gaussiana como filtro.
+    img = cv2.imread("lena.png", cv2.IMREAD_GRAYSCALE)
+
+    radius = 50
+    cv2.namedWindow("mask", cv2.WINDOW_KEEPRATIO)
+    cv2.createTrackbar("radius", "mask", radius, img.shape[0], doNothing)
+
+    while cv2.waitKey(1) != ord('q'):
+        radius = cv2.getTrackbarPos("radius", "mask")
+
+        #    mask = createWhiteDisk2(img.shape[0],
+        #                            img.shape[1],
+        #                            int(img.shape[0] / 2),
+        #                            int(img.shape[1] / 2),
+        #                            radius)
+        mask = create2DGaussian(img.shape[0],
+                                img.shape[1],
+                                int(img.shape[0] / 2),
+                                int(img.shape[1] / 2),
+                                radius,
+                                radius,
+                                theta=0)
+
+        img = np.float32(img)
+
+        planes = [img, np.zeros(img.shape, dtype=np.float32)]
+
+        img2 = cv2.merge(planes)
+        img2 = cv2.dft(img2)
+        planes = cv2.split(img2)
+
+        planes[0] = np.multiply(np.fft.fftshift(mask), planes[0])
+        planes[1] = np.multiply(np.fft.fftshift(mask), planes[1])
+        img2 = cv2.merge(planes)
+        img2 = cv2.idft(img2)
+        img2 = np.fft.fftshift(img2)
+
+        cv2.imshow("img", scaleImage2_uchar(img))
+        cv2.imshow("planes_0", np.fft.fftshift(planes[0]))
+        cv2.imshow("planes_1", np.fft.fftshift(planes[1]))
+        cv2.imshow("mask", np.fft.fftshift(mask))
+        cv2.imshow("img2", np.fft.fftshift(scaleImage2_uchar(img2[:, :, 1])))
+    cv2.destroyAllWindows()
+
+def highpassFilter(input):
+    # %% The Discrete Fourier Transform - Part IV - Highpass Filtering
+    img = cv2.imread("lena.png", cv2.IMREAD_GRAYSCALE)
+    radius = 50
+    cv2.namedWindow("mask", cv2.WINDOW_KEEPRATIO)
+    cv2.createTrackbar("radius", "mask", radius, img.shape[0], doNothing)
+
+    while cv2.waitKey(1) != ord('q'):
+        radius = cv2.getTrackbarPos("radius", "mask")
+
+        #    mask = createWhiteDisk2(img.shape[0],
+        #                            img.shape[1],
+        #                            int(img.shape[0] / 2),
+        #                            int(img.shape[1] / 2),
+        #                            radius)
+        mask = 1.0 - create2DGaussian(img.shape[0],
+                                      img.shape[1],
+                                      int(img.shape[0] / 2),
+                                      int(img.shape[1] / 2),
+                                      radius + 1,
+                                      radius + 1,
+                                      theta=0)
+
+        img = np.float32(img)
+
+        planes = [img, np.zeros(img.shape, dtype=np.float32)]
+
+        img2 = cv2.merge(planes)
+        img2 = cv2.dft(img2)
+        planes = cv2.split(img2)
+
+        planes[0] = np.multiply(np.fft.fftshift(mask), planes[0])
+        planes[1] = np.multiply(np.fft.fftshift(mask), planes[1])
+        img2 = cv2.merge(planes)
+        img2 = cv2.idft(img2)
+        img2 = np.fft.fftshift(img2)
+
+        cv2.imshow("img", scaleImage2_uchar(img))
+        cv2.imshow("planes_0", np.fft.fftshift(planes[0]))
+        cv2.imshow("planes_1", np.fft.fftshift(planes[1]))
+        cv2.imshow("mask", np.fft.fftshift(mask))
+        cv2.imshow("img2", np.fft.fftshift(scaleImage2_uchar(img2[:, :, 1])))
+    cv2.destroyAllWindows()
 
 
 def main():
     print("Welcome to PDI tools 0.1!")
     #piceWiseTransform("lena.png")
-    LaplacOP2("lena.png")
-
+    #logTransform("lolo.jpeg")
+    #intensityTransform("lolo.jpeg")
+    #FDO3("eye.jpeg")
+    #LaplacOP("eye.jpeg")
+    #gaussFilter("eye.jpeg")
+    #DFT("img/pollen.jpg")
+    #DFT2("eye.jpeg")
+    #DFT3("eye.jpeg")
+    #DFTTRUE("eye.jpeg")
+    #lowpassFilter("eye.jpeg")
+    highpassFilter("eye.jpeg")
 if __name__ == "__main__":
     main()
     #cv2.namedWindow("img")
